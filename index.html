@@ -682,9 +682,171 @@
     color: var(--ink-light);
   }
 
+  /* PAYWALL */
+  html, body { height: 100%; }
+
+  .paywall-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(250, 247, 242, 0.98);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 99999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    box-sizing: border-box;
+  }
+
+  .paywall-overlay.active {
+    display: flex;
+  }
+
+  /* Block all interaction with app while paywall is active */
+  body.paywalled nav,
+  body.paywalled .panel {
+    pointer-events: none;
+    user-select: none;
+    filter: blur(3px);
+  }
+
+  .paywall-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2.5rem 2rem;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.10);
+  }
+
+  .paywall-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .paywall-card h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    color: var(--ink);
+    margin-bottom: 0.5rem;
+  }
+
+  .paywall-card p {
+    color: var(--ink-muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+  }
+
+  .paywall-features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.75rem;
+    text-align: left;
+  }
+
+  .paywall-features li {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.9rem;
+    color: var(--ink-light);
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .paywall-features li:last-child { border-bottom: none; }
+
+  .paywall-features .check {
+    color: var(--sage);
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .paywall-price {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 0.2rem;
+  }
+
+  .paywall-price span {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--ink-muted);
+  }
+
+  .paywall-sub {
+    font-size: 0.78rem;
+    color: var(--ink-muted);
+    margin-bottom: 1.25rem;
+  }
+
+  .paywall-btn {
+    display: block;
+    width: 100%;
+    background: var(--sage);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 0.9rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.2s;
+    margin-bottom: 0.75rem;
+  }
+
+  .paywall-btn:hover { opacity: 0.88; }
+
+  .paywall-restore {
+    font-size: 0.8rem;
+    color: var(--ink-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+  }
+
+  .paywall-restore:hover { color: var(--ink-light); }
+
+  .paywall-legal {
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+    margin-top: 1rem;
+    line-height: 1.5;
+  }
+
 </style>
 </head>
 <body>
+
+<!-- PAYWALL OVERLAY -->
+<div class="paywall-overlay" id="paywall">
+  <div class="paywall-card">
+    <div class="paywall-icon">🥘</div>
+    <h2>pantry<em>pro</em></h2>
+    <p>Your smart kitchen companion — shelf life lookup for 200+ items and a recipe rescaler, all in one place.</p>
+    <ul class="paywall-features">
+      <li><span class="check">✓</span> Shelf life guide for 200+ pantry, fridge & household items</li>
+      <li><span class="check">✓</span> Smart recipe rescaler with fraction support</li>
+      <li><span class="check">✓</span> Storage tips & food safety advice</li>
+      <li><span class="check">✓</span> Works on any device, no app needed</li>
+    </ul>
+    <div class="paywall-price">$5 <span>/ month</span></div>
+    <div class="paywall-sub">Cancel anytime · Secure checkout via Stripe</div>
+    <a class="paywall-btn" href="https://buy.stripe.com/test_28EdR984A3oB9vR5kP8bS00?success_url=https%3A%2F%2Fpantry-nu-seven.vercel.app%2F%3Funlocked%3Dtrue" id="stripe-btn">Subscribe for $5/month →</a>
+    <button class="paywall-restore" onclick="restoreAccess()">Already subscribed? Restore access</button>
+    <div class="paywall-legal">Payments processed securely by Stripe. By subscribing you agree to a recurring monthly charge of $5.00 USD until cancelled.</div>
+  </div>
+</div>
 
 <nav>
   <div class="logo">pant<span>ry</span></div>
@@ -1985,6 +2147,64 @@ function switchTab(tab) {
 
 // ─── INIT ─────────────────────────────────────────────────────────
 initExpiry();
+
+// ─── PAYWALL ──────────────────────────────────────────────────────
+const COOKIE_KEY = 'pantry_unlocked';
+const COOKIE_DAYS = 60;
+
+function setCookie(name, value, days) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax`;
+}
+
+function getCookie(name) {
+  return document.cookie.split('; ').reduce((acc, c) => {
+    const [k, v] = c.split('=');
+    return k === name ? v : acc;
+  }, null);
+}
+
+function unlockApp() {
+  document.getElementById('paywall').classList.remove('active');
+  document.body.classList.remove('paywalled');
+  setCookie(COOKIE_KEY, 'true', COOKIE_DAYS);
+}
+
+function showPaywall() {
+  document.getElementById('paywall').classList.add('active');
+  document.body.classList.add('paywalled');
+}
+
+function restoreAccess() {
+  const email = prompt('Enter the email address you used to subscribe:');
+  if (!email) return;
+  // Simple restore: send them to Stripe's customer portal
+  // For now, show an instruction message
+  alert(`To restore access, please check that you subscribed with ${email} and use the same browser. If you're having trouble, contact support. You can also re-subscribe — you won't be double-charged if you manage your subscription via the Stripe customer portal.`);
+}
+
+function initPaywall() {
+  const params = new URLSearchParams(window.location.search);
+
+  // Unlocked via Stripe redirect
+  if (params.get('unlocked') === 'true') {
+    unlockApp();
+    // Clean the URL without reloading
+    window.history.replaceState({}, '', window.location.pathname);
+    return;
+  }
+
+  // Unlocked via cookie (returning subscriber)
+  if (getCookie(COOKIE_KEY) === 'true') {
+    unlockApp();
+    return;
+  }
+
+  // Show paywall
+  showPaywall();
+}
+
+initPaywall();
 </script>
 </body>
 </html>
